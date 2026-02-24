@@ -1,4 +1,4 @@
-#Requires -RunAsAdministrator
+﻿#Requires -RunAsAdministrator
 <#
 .SYNOPSIS
     Script de Mantenimiento Completo para Windows 10 y 11
@@ -139,7 +139,7 @@ function Limpiar-DirectorioSeguro {
                 $total += $archivo.Length
                 Remove-Item -Path $archivo.FullName -Force -ErrorAction Stop
             } catch {
-                Escribir-Log "No se pudo eliminar: $($archivo.FullName) — $($_.Exception.Message)" -Tipo WARN
+                Escribir-Log "No se pudo eliminar: $($archivo.FullName)  -  $($_.Exception.Message)" -Tipo WARN
             }
         }
     } catch {
@@ -151,7 +151,7 @@ function Limpiar-DirectorioSeguro {
 }
 
 # ============================================================
-#  PASO 1 — INFORMACION DEL SISTEMA
+#  PASO 1  -  INFORMACION DEL SISTEMA
 # ============================================================
 function Obtener-InfoSistema {
     Escribir-Log "INFORMACION DEL SISTEMA" -Tipo SECCION
@@ -161,7 +161,7 @@ function Obtener-InfoSistema {
     $build = [int]$os.BuildNumber
     $nombreOS = if ($build -ge 22000) { "Windows 11" } else { "Windows 10" }
 
-    Escribir-Log "Sistema operativo : $nombreOS ($($os.Caption)) — Build $build"
+    Escribir-Log "Sistema operativo : $nombreOS ($($os.Caption))  -  Build $build"
     Escribir-Log "Version           : $($os.Version)"
     Escribir-Log "Arquitectura      : $($os.OSArchitecture)"
 
@@ -193,7 +193,7 @@ function Obtener-InfoSistema {
             }
         }
         $Script:Discos[$disco.DeviceId] = $mediaType
-        Escribir-Log ("  Disco {0}: {1} — {2} — {3}" -f $disco.DeviceId, $disco.FriendlyName, $mediaType, (Obtener-TamanoLegible ($disco.Size)))
+        Escribir-Log ("  Disco {0}: {1}  -  {2}  -  {3}" -f $disco.DeviceId, $disco.FriendlyName, $mediaType, (Obtener-TamanoLegible ($disco.Size)))
     }
 
     # Volumen del sistema
@@ -221,20 +221,20 @@ function Obtener-InfoSistema {
 }
 
 # ============================================================
-#  PASO 2 — LIMPIEZA DE ARCHIVOS TEMPORALES
+#  PASO 2  -  LIMPIEZA DE ARCHIVOS TEMPORALES
 # ============================================================
 function Limpiar-Temporales {
     Escribir-Log "LIMPIEZA DE ARCHIVOS TEMPORALES" -Tipo SECCION
 
     $totalLiberado = 0
 
-    # Temp del sistema (Windows\Temp) — solo archivos con mas de 2 dias
+    # Temp del sistema (Windows\Temp)  -  solo archivos con mas de 2 dias
     $totalLiberado += Limpiar-DirectorioSeguro `
         -Ruta "$env:SystemRoot\Temp" `
         -Descripcion "Temporales del sistema (Windows\Temp)" `
         -DiasAntiguedad 2
 
-    # Temp del usuario actual — solo archivos con mas de 2 dias
+    # Temp del usuario actual  -  solo archivos con mas de 2 dias
     $totalLiberado += Limpiar-DirectorioSeguro `
         -Ruta $env:TEMP `
         -Descripcion "Temporales del usuario ($env:USERNAME)" `
@@ -252,13 +252,13 @@ function Limpiar-Temporales {
         -Descripcion "Minidumps del sistema" `
         -DiasAntiguedad 30
 
-    # Reportes de errores de Windows (WER — solo los temporales)
+    # Reportes de errores de Windows (WER  -  solo los temporales)
     $totalLiberado += Limpiar-DirectorioSeguro `
         -Ruta "$env:ProgramData\Microsoft\Windows\WER\Temp" `
         -Descripcion "Temporales de informe de errores de Windows" `
         -DiasAntiguedad 0
 
-    # Prefetch — seguro limpiar (Windows lo reconstruye; no aplica en SSD con ReadyBoost)
+    # Prefetch  -  seguro limpiar (Windows lo reconstruye; no aplica en SSD con ReadyBoost)
     $totalLiberado += Limpiar-DirectorioSeguro `
         -Ruta "$env:SystemRoot\Prefetch" `
         -Descripcion "Prefetch" `
@@ -269,7 +269,7 @@ function Limpiar-Temporales {
 }
 
 # ============================================================
-#  PASO 3 — LIMPIEZA DE DISCO (herramienta integrada cleanmgr)
+#  PASO 3  -  LIMPIEZA DE DISCO (herramienta integrada cleanmgr)
 # ============================================================
 function Ejecutar-LimpiezaDisco {
     Escribir-Log "LIMPIEZA DE DISCO (cleanmgr)" -Tipo SECCION
@@ -331,7 +331,7 @@ function Ejecutar-LimpiezaDisco {
 }
 
 # ============================================================
-#  PASO 4 — OPTIMIZACION DE ALMACENAMIENTO (SSD vs HDD)
+#  PASO 4  -  OPTIMIZACION DE ALMACENAMIENTO (SSD vs HDD)
 # ============================================================
 function Optimizar-Almacenamiento {
     Escribir-Log "OPTIMIZACION DE ALMACENAMIENTO" -Tipo SECCION
@@ -339,9 +339,9 @@ function Optimizar-Almacenamiento {
     $esSSD = $Script:TipoDiscoSistema -notlike "*HDD*"
 
     if ($esSSD) {
-        Escribir-Log "Disco SSD/NVMe detectado — se ejecutara TRIM (no desfragmentacion)." -Tipo INFO
+        Escribir-Log "Disco SSD/NVMe detectado  -  se ejecutara TRIM (no desfragmentacion)." -Tipo INFO
     } else {
-        Escribir-Log "Disco HDD detectado — se ejecutara desfragmentacion." -Tipo INFO
+        Escribir-Log "Disco HDD detectado  -  se ejecutara desfragmentacion." -Tipo INFO
     }
 
     # Procesar todos los volumenes fijos del sistema
@@ -369,7 +369,7 @@ function Optimizar-Almacenamiento {
 
         try {
             if ($esSSDEsteVol) {
-                # TRIM — no desfragmentar SSD
+                # TRIM  -  no desfragmentar SSD
                 Optimize-Volume -DriveLetter $letra -ReTrim -Verbose *>&1 |
                     ForEach-Object { Escribir-Log "  $_" -Tipo INFO }
                 Escribir-Log "TRIM ejecutado en $letra`:" -Tipo OK
@@ -392,7 +392,7 @@ function Optimizar-Almacenamiento {
 }
 
 # ============================================================
-#  PASO 5 — VERIFICACION DE INTEGRIDAD DEL SISTEMA (DISM + SFC)
+#  PASO 5  -  VERIFICACION DE INTEGRIDAD DEL SISTEMA (DISM + SFC)
 # ============================================================
 function Verificar-IntegridadSistema {
     Escribir-Log "VERIFICACION DE INTEGRIDAD DEL SISTEMA" -Tipo SECCION
@@ -435,7 +435,7 @@ function Verificar-IntegridadSistema {
 }
 
 # ============================================================
-#  PASO 6 — WINDOWS UPDATE
+#  PASO 6  -  WINDOWS UPDATE
 # ============================================================
 function Actualizar-Windows {
     Escribir-Log "WINDOWS UPDATE" -Tipo SECCION
@@ -455,13 +455,13 @@ function Actualizar-Windows {
             } else {
                 Escribir-Log "Se encontraron $($pendientes.Count) actualizacion(es). Instalando..." -Tipo INFO
                 Install-WindowsUpdate -MicrosoftUpdate -AcceptAll -IgnoreReboot -ErrorAction Stop |
-                    ForEach-Object { Escribir-Log "  WU: $($_.Title) — $($_.Status)" -Tipo INFO }
+                    ForEach-Object { Escribir-Log "  WU: $($_.Title)  -  $($_.Status)" -Tipo INFO }
                 Escribir-Log "Actualizaciones instaladas. Puede ser necesario reiniciar." -Tipo OK
-                Agregar-Resumen "Windows Update: $($pendientes.Count) actualizacion(es) instalada(s) — reinicio pendiente"
+                Agregar-Resumen "Windows Update: $($pendientes.Count) actualizacion(es) instalada(s)  -  reinicio pendiente"
             }
         } catch {
             Escribir-Log "Error con PSWindowsUpdate: $($_.Exception.Message)" -Tipo ERROR
-            Agregar-Resumen "Windows Update: error — revisar log"
+            Agregar-Resumen "Windows Update: error  -  revisar log"
         }
     } else {
         # Alternativa: usar el servicio de Windows Update via COM
@@ -482,7 +482,7 @@ function Actualizar-Windows {
                 for ($i = 0; $i -lt $total; $i++) {
                     Escribir-Log "  - $($resultado.Updates.Item($i).Title)" -Tipo WARN
                 }
-                Agregar-Resumen "Windows Update: $total actualizacion(es) pendientes — instalar manualmente o con PSWindowsUpdate"
+                Agregar-Resumen "Windows Update: $total actualizacion(es) pendientes  -  instalar manualmente o con PSWindowsUpdate"
             }
         } catch {
             Escribir-Log "No se pudo consultar Windows Update: $($_.Exception.Message)" -Tipo ERROR
@@ -492,7 +492,7 @@ function Actualizar-Windows {
 }
 
 # ============================================================
-#  PASO 7 — WINDOWS DEFENDER (analisis rapido)
+#  PASO 7  -  WINDOWS DEFENDER (analisis rapido)
 # ============================================================
 function Ejecutar-AntivirusScan {
     Escribir-Log "ANALISIS DE SEGURIDAD (Windows Defender)" -Tipo SECCION
@@ -516,21 +516,21 @@ function Ejecutar-AntivirusScan {
             $reciente = $historial | Sort-Object InitialDetectionTime -Descending | Select-Object -First 5
             Escribir-Log "Amenazas detectadas recientemente:" -Tipo WARN
             $reciente | ForEach-Object {
-                Escribir-Log "  [$($_.InitialDetectionTime)] $($_.ThreatName) — $($_.Resources)" -Tipo WARN
+                Escribir-Log "  [$($_.InitialDetectionTime)] $($_.ThreatName)  -  $($_.Resources)" -Tipo WARN
             }
-            Agregar-Resumen "Defender: amenazas detectadas — revisar log"
+            Agregar-Resumen "Defender: amenazas detectadas  -  revisar log"
         } else {
             Escribir-Log "No se detectaron amenazas." -Tipo OK
             Agregar-Resumen "Defender: sin amenazas detectadas"
         }
     } catch {
         Escribir-Log "Error al ejecutar el analisis: $($_.Exception.Message)" -Tipo ERROR
-        Agregar-Resumen "Defender: error en analisis — revisar log"
+        Agregar-Resumen "Defender: error en analisis  -  revisar log"
     }
 }
 
 # ============================================================
-#  PASO 8 — RED (flush DNS, reset de pila de red)
+#  PASO 8  -  RED (flush DNS, reset de pila de red)
 # ============================================================
 function Mantener-Red {
     Escribir-Log "MANTENIMIENTO DE RED" -Tipo SECCION
@@ -564,7 +564,7 @@ function Mantener-Red {
 }
 
 # ============================================================
-#  PASO 9 — REVISION DE LOGS DE EVENTOS CRITICOS
+#  PASO 9  -  REVISION DE LOGS DE EVENTOS CRITICOS
 # ============================================================
 function Revisar-EventosCriticos {
     Escribir-Log "REVISION DE EVENTOS CRITICOS DEL SISTEMA (ultimas 24 h)" -Tipo SECCION
@@ -596,7 +596,7 @@ function Revisar-EventosCriticos {
 }
 
 # ============================================================
-#  PASO 10 — VERIFICACION DE ESTADO DE CHKDSK
+#  PASO 10  -  VERIFICACION DE ESTADO DE CHKDSK
 # ============================================================
 function Verificar-ChkDsk {
     Escribir-Log "VERIFICACION DE ESTADO DE DISCO (chkdsk)" -Tipo SECCION
@@ -627,7 +627,7 @@ function Verificar-ChkDsk {
 }
 
 # ============================================================
-#  PASO 11 — SERVICIOS Y PROGRAMAS DE INICIO
+#  PASO 11  -  SERVICIOS Y PROGRAMAS DE INICIO
 # ============================================================
 function Revisar-Inicio {
     Escribir-Log "REVISION DE PROGRAMAS Y SERVICIOS DE INICIO" -Tipo SECCION
@@ -660,7 +660,7 @@ function Revisar-Inicio {
         $serviciosError | ForEach-Object {
             Escribir-Log "  $($_.Name) ($($_.DisplayName))" -Tipo WARN
         }
-        Agregar-Resumen "Inicio: $($serviciosError.Count) servicio(s) detenidos — revisar log"
+        Agregar-Resumen "Inicio: $($serviciosError.Count) servicio(s) detenidos  -  revisar log"
     } else {
         Escribir-Log "Todos los servicios automaticos estan en ejecucion." -Tipo OK
         Agregar-Resumen "Inicio: servicios OK"
@@ -668,7 +668,7 @@ function Revisar-Inicio {
 }
 
 # ============================================================
-#  PASO 12 — ACTUALIZACION DE CONTROLADORES (informativo)
+#  PASO 12  -  ACTUALIZACION DE CONTROLADORES (informativo)
 # ============================================================
 function Revisar-Controladores {
     Escribir-Log "REVISION DE CONTROLADORES (dispositivos con problemas)" -Tipo SECCION
@@ -682,9 +682,9 @@ function Revisar-Controladores {
         if ($problemDevices) {
             Escribir-Log "Dispositivos con problemas detectados:" -Tipo WARN
             $problemDevices | ForEach-Object {
-                Escribir-Log "  [$($_.Status)] $($_.FriendlyName) — Codigo: $($_.ConfigManagerErrorCode)" -Tipo WARN
+                Escribir-Log "  [$($_.Status)] $($_.FriendlyName)  -  Codigo: $($_.ConfigManagerErrorCode)" -Tipo WARN
             }
-            Agregar-Resumen "Controladores: $($problemDevices.Count) dispositivo(s) con problemas — revisar Administrador de Dispositivos"
+            Agregar-Resumen "Controladores: $($problemDevices.Count) dispositivo(s) con problemas  -  revisar Administrador de Dispositivos"
         } else {
             Escribir-Log "Todos los dispositivos funcionan correctamente." -Tipo OK
             Agregar-Resumen "Controladores: todos OK"
@@ -696,7 +696,7 @@ function Revisar-Controladores {
 }
 
 # ============================================================
-#  PASO 13 — CONFIGURACION DE ENERGIA
+#  PASO 13  -  CONFIGURACION DE ENERGIA
 # ============================================================
 function Verificar-Energia {
     Escribir-Log "CONFIGURACION DE ENERGIA" -Tipo SECCION
@@ -728,7 +728,7 @@ function Verificar-Energia {
 }
 
 # ============================================================
-#  PASO 14 — TAREAS DE MANTENIMIENTO PROGRAMADAS DE WINDOWS
+#  PASO 14  -  TAREAS DE MANTENIMIENTO PROGRAMADAS DE WINDOWS
 # ============================================================
 function Ejecutar-TareasMantenimiento {
     Escribir-Log "TAREAS DE MANTENIMIENTO PROGRAMADO DE WINDOWS" -Tipo SECCION
@@ -804,7 +804,7 @@ function Mostrar-MenuPasos {
         # Encabezado del menu
         Write-Host ""
         Write-Host "  $('=' * 66)" -ForegroundColor Cyan
-        Write-Host "   SELECCION DE PASOS — Mantenimiento Windows v$Script:Version" -ForegroundColor Cyan
+        Write-Host "   SELECCION DE PASOS  -  Mantenimiento Windows v$Script:Version" -ForegroundColor Cyan
         Write-Host "  $('=' * 66)" -ForegroundColor Cyan
         Write-Host ""
         Write-Host ("  {0,3}  {1,-3}  {2,-40}  {3}" -f "N°","Est","Paso","Descripcion") -ForegroundColor DarkGray
@@ -980,7 +980,7 @@ function Solicitar-Reinicio {
             }
         } else {
             Escribir-Log "Reinicio pospuesto. Recuerda reiniciar el equipo manualmente." -Tipo INFO
-            Agregar-Resumen "Reinicio: pospuesto — pendiente manual"
+            Agregar-Resumen "Reinicio: pospuesto  -  pendiente manual"
         }
     }
 }
@@ -996,11 +996,11 @@ function Main {
 
     # Encabezado
     Write-Host "`n$('*' * 70)" -ForegroundColor Magenta
-    Write-Host "  MANTENIMIENTO COMPLETO DE WINDOWS — v$Script:Version" -ForegroundColor Magenta
+    Write-Host "  MANTENIMIENTO COMPLETO DE WINDOWS  -  v$Script:Version" -ForegroundColor Magenta
     Write-Host "  $(Get-Date -Format 'dddd, dd/MM/yyyy HH:mm:ss')" -ForegroundColor Magenta
     Write-Host "$('*' * 70)`n" -ForegroundColor Magenta
 
-    Escribir-Log "Inicio de mantenimiento — Version $Script:Version"
+    Escribir-Log "Inicio de mantenimiento  -  Version $Script:Version"
 
     # Verificar ejecucion como administrador
     $esAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
@@ -1060,7 +1060,7 @@ function Main {
                 & $paso.Funcion
             } catch {
                 Escribir-Log "Error inesperado en paso $num ($($paso.Nombre)): $($_.Exception.Message)" -Tipo ERROR
-                Agregar-Resumen "Paso $num ($($paso.Nombre)): ERROR — $($_.Exception.Message)"
+                Agregar-Resumen "Paso $num ($($paso.Nombre)): ERROR  -  $($_.Exception.Message)"
             }
         } else {
             Escribir-Log "Paso $num omitido por el usuario: $($paso.Nombre)" -Tipo INFO
