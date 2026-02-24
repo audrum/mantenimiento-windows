@@ -52,18 +52,19 @@ Cuando se ejecuta sin parametros, muestra un menu donde se pueden activar o desa
 
 ```
   ====================================================================
-   SELECCION DE PASOS  -  Mantenimiento Windows v1.2.0
+   SELECCION DE PASOS  -  Mantenimiento Windows v1.3.0
   ====================================================================
 
-   N°  Est  Paso                                      Descripcion
+   N   Est  Paso                                      Descripcion
   --------------------------------------------------------------------
     1  [*]  Informacion del sistema (requerido)       Detecta OS, CPU, RAM y tipo de disco
     2  [X]  Limpieza de temporales                    Elimina archivos temporales...
     3  [X]  Limpieza de disco (cleanmgr)              Ejecuta la herramienta integrada...
     4  [X]  Optimizacion de almacenamiento            TRIM para SSD/NVMe o desfrag para HDD
    ...
+   15 [X]  Salud de disco (S.M.A.R.T.)               Detecta fallos inminentes por temperatura...
   --------------------------------------------------------------------
-  Pasos seleccionados: 14 de 14
+  Pasos seleccionados: 15 de 15
 
   [T] Todos  [N] Ninguno  [ENTER] Ejecutar  [Q] Salir
   >
@@ -73,7 +74,7 @@ Cuando se ejecuta sin parametros, muestra un menu donde se pueden activar o desa
 
 | Tecla | Accion |
 |---|---|
-| Numero (1-14) | Activa o desactiva ese paso |
+| Numero (1-15) | Activa o desactiva ese paso |
 | `T` | Selecciona todos los pasos |
 | `N` | Desmarca todos los pasos (excepto el requerido) |
 | `ENTER` | Ejecuta con la seleccion actual |
@@ -133,6 +134,40 @@ Util para automatizacion o tareas programadas. El paso 1 siempre se incluye.
 | 15 | Salud de disco (S.M.A.R.T.) | Detecta fallos inminentes analizando temperatura, desgaste (SSD), errores no corregidos, horas de encendido y latencias maximas mediante `Get-StorageReliabilityCounter` | Si | Si |
 
 > **\*** El paso 1 es requerido y siempre se ejecuta. Los demas son opcionales.
+
+---
+
+## Salud de disco S.M.A.R.T. (paso 15)
+
+Usa `Get-StorageReliabilityCounter`, integrado en Windows 10/11, para analizar cada disco fisico sin herramientas externas. Evalua las siguientes metricas con umbrales diferenciados por tipo de disco:
+
+### Temperatura
+
+| Estado | HDD | SSD / NVMe |
+|---|---|---|
+| Normal | <= 45 °C | <= 60 °C |
+| Advertencia | 46 - 55 °C | 61 - 70 °C |
+| Critica | > 55 °C | > 70 °C |
+
+### Desgaste de SSD (wear level)
+
+| Estado | Desgaste acumulado |
+|---|---|
+| Normal | < 70% usado |
+| Advertencia - planifica reemplazo | >= 70% usado |
+| Critico - reemplazo urgente | >= 90% usado |
+
+### Otros indicadores
+
+| Metrica | Condicion de alerta |
+|---|---|
+| Errores de lectura no corregidos | Cualquier valor > 0 (critico) |
+| Errores de escritura no corregidos | Cualquier valor > 0 (critico) |
+| Horas de encendido | > 35 000 h en HDD / > 43 800 h en SSD (informativo) |
+| Latencia maxima de lectura/escritura | > 500 ms (advertencia) |
+| Estado general de Windows | `Warning` o `Unhealthy` |
+
+El resumen al final del mantenimiento indica si hay **problemas criticos** (considerar reemplazo inmediato), **advertencias** (monitorizar de cerca) o si todos los discos estan en buen estado.
 
 ---
 
