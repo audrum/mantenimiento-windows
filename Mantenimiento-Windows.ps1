@@ -46,7 +46,7 @@ $ErrorActionPreference = "Continue"
 # ============================================================
 #  CONFIGURACION GLOBAL
 # ============================================================
-$Script:Version      = "1.2.0"
+$Script:Version      = "1.3.0"
 $Script:FechaInicio  = Get-Date
 $Script:LogDir       = "$env:SystemDrive\Mantenimiento_Logs"
 $Script:LogFile      = "$Script:LogDir\Mantenimiento_$(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss').log"
@@ -69,6 +69,7 @@ $Script:PasosDisponibles = @(
     @{ Numero=12; Nombre="Revision de controladores";          Desc="Detecta dispositivos con errores";                 Funcion={ Revisar-Controladores };        Requerido=$false; Seleccionado=$true }
     @{ Numero=13; Nombre="Configuracion de energia";           Desc="Verifica plan de energia y salud de bateria";      Funcion={ Verificar-Energia };            Requerido=$false; Seleccionado=$true }
     @{ Numero=14; Nombre="Tareas de mantenimiento programado"; Desc="Dispara tareas integradas de mantenimiento";       Funcion={ Ejecutar-TareasMantenimiento }; Requerido=$false; Seleccionado=$true }
+    @{ Numero=15; Nombre="Salud de disco (S.M.A.R.T.)";       Desc="Detecta fallos inminentes por temperatura y desgaste"; Funcion={ Verificar-SaludDisco };        Requerido=$false; Seleccionado=$true }
 )
 
 # ============================================================
@@ -760,6 +761,141 @@ function Ejecutar-TareasMantenimiento {
     }
 
     Agregar-Resumen "Tareas programadas: ejecutadas"
+}
+
+# ============================================================
+#  PASO 15 - SALUD DE DISCO (S.M.A.R.T.)
+# ============================================================
+function Verificar-SaludDisco {
+    Escribir-Log "SALUD DE DISCO (S.M.A.R.T.)" -Tipo SECCION
+
+    $discos = Get-PhysicalDisk -ErrorAction SilentlyContinue
+    if (-not $discos) {
+        Escribir-Log "No se pudieron obtener datos de discos fisicos." -Tipo WARN
+        Agregar-Resumen "Salud de disco: no se pudieron leer datos"
+        return
+    }
+
+    $hayProblemas   = $false
+    $hayAdvertencias = $false
+
+    foreach ($disco in $discos) {
+        $mediaType = $disco.MediaType
+        $esHDD     = $mediaType -eq "HDD"
+
+        Escribir-Log "Disco: $($disco.FriendlyName)  |  Tipo: $mediaType  |  Tamano: $(Obtener-TamanoLegible $disco.Size)" -Tipo INFO
+
+        # --- Estado general reportado por Windows ---
+        switch ($disco.HealthStatus) {
+            "Healthy"   { Escribir-Log "  Estado general      : Saludable" -Tipo OK }
+            "Warning"   {
+                Escribir-Log "  Estado general      : ADVERTENCIA" -Tipo WARN
+                $hayAdvertencias = $true
+            }
+            "Unhealthy" {
+                Escribir-Log "  Estado general      : NO SALUDABLE - Se recomienda reemplazo urgente" -Tipo ERROR
+                $hayProblemas = $true
+            }
+            default     { Escribir-Log "  Estado general      : $($disco.HealthStatus)" -Tipo INFO }
+        }
+
+        Escribir-Log "  Estado operativo    : $($disco.OperationalStatus)" -Tipo INFO
+
+        # --- Contadores S.M.A.R.T. via StorageReliabilityCounter ---
+        try {
+            $smart = Get-StorageReliabilityCounter -PhysicalDisk $disco -ErrorAction Stop
+
+            # Temperatura
+            if ($null -ne $smart.Temperature -and $smart.Temperature -gt 0) {
+                $limiteCritico  = if ($esHDD) { 55 } else { 70 }
+                $limiteWarning  = if ($esHDD) { 45 } else { 60 }
+                $temp           = $smart.Temperature
+
+                if ($temp -ge $limiteCritico) {
+                    Escribir-Log "  Temperatura         : $temp C - CRITICA (limite $limiteCritico C)" -Tipo ERROR
+                    $hayProblemas = $true
+                } elseif ($temp -ge $limiteWarning) {
+                    Escribir-Log "  Temperatura         : $temp C - ELEVADA (limite recomendado $limiteWarning C)" -Tipo WARN
+                    $hayAdvertencias = $true
+                } else {
+                    Escribir-Log "  Temperatura         : $temp C - Normal" -Tipo OK
+                }
+
+                if ($null -ne $smart.TemperatureMax -and $smart.TemperatureMax -gt 0) {
+                    Escribir-Log "  Temperatura maxima  : $($smart.TemperatureMax) C (historico)" -Tipo INFO
+                }
+            } else {
+                Escribir-Log "  Temperatura         : No disponible" -Tipo INFO
+            }
+
+            # Desgaste (relevante en SSD/NVMe: 0 = nuevo, 100 = agotado)
+            if ($null -ne $smart.Wear -and $smart.Wear -gt 0) {
+                $restante = 100 - $smart.Wear
+                if ($smart.Wear -ge 90) {
+                    Escribir-Log "  Desgaste SSD        : $($smart.Wear)% usado ($restante% restante) - CRITICO, reemplazo urgente" -Tipo ERROR
+                    $hayProblemas = $true
+                } elseif ($smart.Wear -ge 70) {
+                    Escribir-Log "  Desgaste SSD        : $($smart.Wear)% usado ($restante% restante) - ALTO, planifica reemplazo" -Tipo WARN
+                    $hayAdvertencias = $true
+                } else {
+                    Escribir-Log "  Desgaste SSD        : $($smart.Wear)% usado ($restante% restante) - Normal" -Tipo OK
+                }
+            } else {
+                if (-not $esHDD) {
+                    Escribir-Log "  Desgaste SSD        : No disponible para este modelo" -Tipo INFO
+                }
+            }
+
+            # Errores de lectura no corregidos (cualquier valor > 0 es critico)
+            if ($null -ne $smart.ReadErrorsUncorrected -and $smart.ReadErrorsUncorrected -gt 0) {
+                Escribir-Log "  Errores lectura     : $($smart.ReadErrorsUncorrected) no corregidos - FALLO INMINENTE POSIBLE" -Tipo ERROR
+                $hayProblemas = $true
+            } else {
+                Escribir-Log "  Errores lectura     : Sin errores no corregidos" -Tipo OK
+            }
+
+            # Errores de escritura no corregidos
+            if ($null -ne $smart.WriteErrorsUncorrected -and $smart.WriteErrorsUncorrected -gt 0) {
+                Escribir-Log "  Errores escritura   : $($smart.WriteErrorsUncorrected) no corregidos - FALLO INMINENTE POSIBLE" -Tipo ERROR
+                $hayProblemas = $true
+            } else {
+                Escribir-Log "  Errores escritura   : Sin errores no corregidos" -Tipo OK
+            }
+
+            # Horas de encendido (informativo)
+            if ($null -ne $smart.PowerOnHours -and $smart.PowerOnHours -gt 0) {
+                $anos  = [math]::Round($smart.PowerOnHours / 8760, 1)
+                $nivel = if ($esHDD -and $smart.PowerOnHours -gt 35000) { " - uso prolongado, considera reemplazo preventivo" }
+                         elseif (-not $esHDD -and $smart.PowerOnHours -gt 43800) { " - uso prolongado, considera reemplazo preventivo" }
+                         else { "" }
+                Escribir-Log "  Horas de encendido  : $($smart.PowerOnHours) h (~$anos anos)$nivel" -Tipo INFO
+            }
+
+            # Latencias maximas (alertan sobre degradacion de rendimiento)
+            if ($null -ne $smart.ReadLatencyMax -and $smart.ReadLatencyMax -gt 500) {
+                Escribir-Log "  Latencia max lectura: $($smart.ReadLatencyMax) ms - ELEVADA (puede indicar sectores defectuosos)" -Tipo WARN
+                $hayAdvertencias = $true
+            }
+            if ($null -ne $smart.WriteLatencyMax -and $smart.WriteLatencyMax -gt 500) {
+                Escribir-Log "  Latencia max escrit.: $($smart.WriteLatencyMax) ms - ELEVADA" -Tipo WARN
+                $hayAdvertencias = $true
+            }
+
+        } catch {
+            Escribir-Log "  Contadores S.M.A.R.T. no disponibles: $($_.Exception.Message)" -Tipo WARN
+        }
+
+        Escribir-Log "" -Tipo INFO
+    }
+
+    # Resumen global
+    if ($hayProblemas) {
+        Agregar-Resumen "Salud de disco (S.M.A.R.T.): PROBLEMAS CRITICOS DETECTADOS - revisar log y considerar reemplazo"
+    } elseif ($hayAdvertencias) {
+        Agregar-Resumen "Salud de disco (S.M.A.R.T.): advertencias detectadas - monitorizar de cerca"
+    } else {
+        Agregar-Resumen "Salud de disco (S.M.A.R.T.): todos los discos en buen estado"
+    }
 }
 
 # ============================================================

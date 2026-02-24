@@ -130,6 +130,7 @@ Util para automatizacion o tareas programadas. El paso 1 siempre se incluye.
 | 12 | Revision de controladores | Detecta dispositivos con errores o codigos de problema en el Administrador de dispositivos | Si | Si |
 | 13 | Configuracion de energia | Verifica el plan de energia activo y genera un informe de salud de bateria en equipos portatiles | Si | Si |
 | 14 | Tareas programadas | Dispara las tareas de mantenimiento integradas de Windows (defrag, limpieza, registro, WinSAT, etc.) | Si | Si |
+| 15 | Salud de disco (S.M.A.R.T.) | Detecta fallos inminentes analizando temperatura, desgaste (SSD), errores no corregidos, horas de encendido y latencias maximas mediante `Get-StorageReliabilityCounter` | Si | Si |
 
 > **\*** El paso 1 es requerido y siempre se ejecuta. Los demas son opcionales.
 
@@ -252,6 +253,7 @@ $content = Get-Content '.\Mantenimiento-Windows.ps1' -Raw
 
 | Version | Cambios |
 |---|---|
+| 1.3.0 | Agrega paso 15: verificacion de salud de disco con S.M.A.R.T. Detecta temperatura critica, desgaste de SSD, errores de lectura/escritura no corregidos, horas de encendido y latencias elevadas usando `Get-StorageReliabilityCounter` nativo de Windows |
 | 1.2.2 | Corrige error `The property 'Count' cannot be found on this object` al seleccionar [N] Ninguno en el menu. Causa raiz: `OrderedDictionary` siempre usa el indexador posicional (`int`) en PowerShell aunque las claves sean strings, devolviendo `$null` cuando el indice estaba fuera de rango. Solucion definitiva: reemplaza `[ordered]@{}` por un array de hashtables con iteracion directa (`foreach`/`Where-Object`/`ForEach-Object`) eliminando cualquier indexador ambiguo |
 | 1.2.1 | Corrige error de indice fuera de rango (`Index was out of range`) en el menu de seleccion de pasos al acceder al paso 14. Causa: `[ordered]@{}` con claves enteras usa indexacion posicional en lugar de por clave. Solucion: claves convertidas a strings. Ademas: encoding corregido a UTF-8 con BOM y CRLF para compatibilidad con Windows PowerShell 5.1 |
 | 1.2.0 | Menu interactivo de seleccion de pasos, parametros `-Pasos` y `-TodosLosPasos` |
