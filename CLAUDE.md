@@ -24,6 +24,16 @@ print('BOM + CRLF aplicado correctamente')
 
 ## Architecture
 
+### run.ps1 (bootstrapper)
+
+`run.ps1` is a minimal launcher that enables the `irm ... | iex` one-liner workflow:
+- Accepts the same 4 parameters as the main script (`-AutoReiniciar`, `-SegundosEspera`, `-Pasos`, `-TodosLosPasos`).
+- If the session is **not elevated**, self-elevates via `Start-Process powershell -Verb RunAs`, re-downloading itself with the same parameters forwarded.
+- If already elevated, downloads `Mantenimiento-Windows.ps1` via `Invoke-RestMethod` and runs it as a scriptblock with splatted parameters.
+- Saved as **UTF-8 with BOM + CRLF** (same as the main script).
+
+### Mantenimiento-Windows.ps1 (main script)
+
 `Mantenimiento-Windows.ps1` is a single flat file structured in clearly delimited sections (`# ===... SECCION ...===`):
 
 1. **Parameters** — `AutoReiniciar`, `SegundosEspera`, `Pasos`, `TodosLosPasos`
@@ -54,7 +64,7 @@ print('BOM + CRLF aplicado correctamente')
 ## Commit and push workflow
 
 ```bash
-git add Mantenimiento-Windows.ps1 README.md
+git add Mantenimiento-Windows.ps1 run.ps1 README.md
 git commit -m "mensaje descriptivo"
 git push origin master
 ```
