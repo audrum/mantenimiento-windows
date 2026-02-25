@@ -131,7 +131,7 @@ Util para automatizacion o tareas programadas. El paso 1 siempre se incluye.
 | 12 | Revision de controladores | Detecta dispositivos con errores o codigos de problema en el Administrador de dispositivos | Si | Si |
 | 13 | Configuracion de energia | Verifica el plan de energia activo y genera un informe de salud de bateria en equipos portatiles | Si | Si |
 | 14 | Tareas programadas | Dispara las tareas de mantenimiento integradas de Windows (defrag, limpieza, registro, WinSAT, etc.) | Si | Si |
-| 15 | Salud de disco (S.M.A.R.T.) | Detecta fallos inminentes analizando temperatura, desgaste (SSD), errores no corregidos, horas de encendido y latencias maximas mediante `Get-StorageReliabilityCounter` | Si | Si |
+| 15 | Salud de disco (S.M.A.R.T.) | Detecta fallos inminentes analizando temperatura, desgaste (SSD), errores no corregidos, horas de encendido y latencias maximas mediante `Get-StorageReliabilityCounter`. Calcula y muestra un **porcentaje de salud** con barra de progreso visual | Si | Si |
 
 > **\*** El paso 1 es requerido y siempre se ejecuta. Los demas son opcionales.
 
@@ -167,6 +167,42 @@ Usa `Get-StorageReliabilityCounter`, integrado en Windows 10/11, para analizar c
 | Latencia maxima de lectura/escritura | > 500 ms (advertencia) |
 | Estado general de Windows | `Warning` o `Unhealthy` |
 
+### Porcentaje de salud del disco
+
+Al final del analisis de cada disco se muestra un porcentaje de salud calculado a partir de todos los indicadores anteriores, similar a la metrica principal de HDD Sentinel:
+
+```
+  Salud del disco     : [#########################] 100%  - Bueno
+  Salud del disco     : [##################-------]  72%  - Regular
+  Salud del disco     : [#######------------------]  28%  - Malo
+```
+
+El color de la barra cambia segun el resultado:
+
+| Rango | Color | Estado |
+|---|---|---|
+| 80% - 100% | Verde | Bueno |
+| 50% - 79% | Amarillo | Regular |
+| 0% - 49% | Rojo | Malo |
+
+Los factores que reducen el porcentaje y su impacto son:
+
+| Factor | Impacto en la salud |
+|---|---|
+| Estado Windows: `Unhealthy` | Techo maximo en 10% |
+| Estado Windows: `Warning` | Techo maximo en 65% |
+| Errores de lectura no corregidos | -25% por cada tipo |
+| Errores de escritura no corregidos | -25% por cada tipo |
+| Desgaste SSD >= 90% | Salud = `100 - desgaste` (ej. 95% usado -> max 5%) |
+| Desgaste SSD >= 70% | -15% |
+| Temperatura critica | -20% |
+| Temperatura elevada | -10% |
+| Latencia maxima > 1 000 ms | -10% |
+| Latencia maxima > 500 ms | -5% |
+| Horas de encendido excesivas | -5% |
+
+Si se detectan factores negativos, se listan individualmente debajo de la barra para facilitar el diagnostico.
+
 El resumen al final del mantenimiento indica si hay **problemas criticos** (considerar reemplazo inmediato), **advertencias** (monitorizar de cerca) o si todos los discos estan en buen estado.
 
 ---
@@ -195,6 +231,7 @@ El log incluye:
 - Informacion completa del hardware detectado
 - Resultado de cada paso ejecutado u omitido
 - Advertencias y errores con mensajes descriptivos
+- Porcentaje de salud de cada disco y factores detectados (paso 15)
 - Resumen final con el estado de cada area
 - Ruta al informe de bateria (en equipos portatiles)
 
