@@ -22,7 +22,7 @@ Script de PowerShell para realizar un mantenimiento completo y automatizado de e
 Abre PowerShell (no hace falta ejecutarlo como Administrador de antemano) y pega:
 
 ```powershell
-irm run.andresbolivar.me/run.ps1 | iex
+irm run.andresbolivar.me/mantenimiento/run.ps1 | iex
 ```
 
 El lanzador detecta automaticamente si la sesion no esta elevada, solicita permisos via **UAC** y abre el menu de seleccion de pasos en una ventana de administrador.
@@ -33,13 +33,13 @@ Para pasar opciones usa la sintaxis de scriptblock:
 
 ```powershell
 # Ejecutar todos los pasos sin mostrar el menu
-& ([scriptblock]::Create((irm 'run.andresbolivar.me/run.ps1'))) -TodosLosPasos
+& ([scriptblock]::Create((irm 'run.andresbolivar.me/mantenimiento/run.ps1'))) -TodosLosPasos
 
 # Pasos especificos
-& ([scriptblock]::Create((irm 'run.andresbolivar.me/run.ps1'))) -Pasos 2,5,7
+& ([scriptblock]::Create((irm 'run.andresbolivar.me/mantenimiento/run.ps1'))) -Pasos 2,5,7
 
 # Todos los pasos con reinicio automatico en 30 segundos
-& ([scriptblock]::Create((irm 'run.andresbolivar.me/run.ps1'))) -TodosLosPasos -AutoReiniciar -SegundosEspera 30
+& ([scriptblock]::Create((irm 'run.andresbolivar.me/mantenimiento/run.ps1'))) -TodosLosPasos -AutoReiniciar -SegundosEspera 30
 ```
 
 ### Descarga y ejecucion local (alternativa)
