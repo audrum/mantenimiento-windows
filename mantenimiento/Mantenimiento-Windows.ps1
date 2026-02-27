@@ -35,6 +35,7 @@
 #>
 param(
     [switch]$AutoReiniciar,
+    [ValidateRange(1, 3600)]
     [int]$SegundosEspera = 60,
     [int[]]$Pasos,
     [switch]$TodosLosPasos
