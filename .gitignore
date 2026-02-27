@@ -1,1 +1,9 @@
 CLAUDE.md
+docs/
+.DS_Store
+Thumbs.db
+.vscode/
+.vs/
+.idea/
+*.swp
+*.bak
